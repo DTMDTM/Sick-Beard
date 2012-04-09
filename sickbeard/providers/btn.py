@@ -26,7 +26,7 @@ from sickbeard import tvcache
 from sickbeard.helpers import sanitizeSceneName
 from sickbeard.common import Quality
 
-import jsonrpclib
+from lib import jsonrpclib
 import datetime
 import time
 
@@ -53,7 +53,7 @@ class BTNProvider(generic.TorrentProvider):
     def _doSearch(self, search_params, show=None):
         params = {}
         apikey = sickbeard.BTN_API_KEY
-        server = server = jsonrpclib.Server('http://api.btnapps.net')
+        server = jsonrpclib.Server('http://api.btnapps.net')
 
         if search_params:
             params.update(search_params)
@@ -266,6 +266,6 @@ class BTNCache(tvcache.TVCache):
         return data
 
     def _checkAuth(self, data):
-        return self.provider._checkAuthFromData(data)
+        return self.provider.checkAuthFromData(data)
 
 provider = BTNProvider()
