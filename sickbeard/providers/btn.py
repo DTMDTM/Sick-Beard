@@ -48,7 +48,12 @@ class BTNProvider(generic.TorrentProvider):
         return 'btn.gif'
 
     def checkAuthFromData(self, data):
-        return 'error' in data
+        result = True
+        if 'api-error' in data:
+            logger.log("Error in sickbeard data retrieval: " + data['api-error'], logger.ERROR)
+            result = False
+
+        return result
 
     def _doSearch(self, search_params, show=None):
         params = {}
@@ -65,7 +70,7 @@ class BTNProvider(generic.TorrentProvider):
             search_results = server.getTorrentsSearch(apikey, params, int(results_per_page))
         except jsonrpclib.jsonrpc.ProtocolError as error:
             logger.log(u"Error accessing BTN API: " + error.message[1], logger.ERROR)
-            search_results = {'error': error.message[1]}
+            search_results = {'api-error': error.message[1]}
             return search_results
         
         if not search_results:
@@ -93,7 +98,7 @@ class BTNProvider(generic.TorrentProvider):
                     search_results = server.getTorrentsSearch(apikey, params, results_per_page, page * results_per_page)
                 except jsonrpclib.jsonrpc.ProtocolError as error:
                     logger.log(u"Error accessing BTN API: " + error.message[1], logger.ERROR)
-                    search_results = {'error': error.message[1]}
+                    search_results = {'api-error': error.message[1]}
                     return search_results
                 
                 if 'torrents' in search_results:
@@ -111,7 +116,8 @@ class BTNProvider(generic.TorrentProvider):
 #        Disabled this because it overspammed the debug log a bit too much
 #        logger.log(u'BTN provider returning the following results for search parameters: ' + str(params), logger.DEBUG)
 #        for result in results:
-#            logger.log(str(self._get_title_and_url(result)), logger.DEBUG)
+#            (title, result) = self._get_title_and_url(result)
+#            logger.log(title, logger.DEBUG)
             
         return results
 
@@ -135,8 +141,6 @@ class BTNProvider(generic.TorrentProvider):
                 title += '.' + str(search_result['Source']) if title else str(search_result['Source'])
             if 'Codec' in search_result:
                 title += '.' + str(search_result['Codec']) if title else str(search_result['Codec'])
-            else:
-                title = None
         
         if 'DownloadURL' in search_result:
             url = search_result['DownloadURL']
@@ -252,8 +256,30 @@ class BTNCache(tvcache.TVCache):
     def __init__(self, provider):
         tvcache.TVCache.__init__(self, provider)
         
-        # Only query once a day since it will be a lot of data every time
-        self.minTime = 24 * 60
+        # Query every 59 mins since we query the things from the last hour
+        self.minTime = 59
+
+    def updateCache(self):
+        if not self.shouldUpdate():
+            return
+        
+        data = self._getRSSData()
+
+        # As long as we got something from the provider we count it as an update 
+        if data:
+            self.setLastUpdate()
+        else:
+            return []
+        
+        logger.log(u"Clearing "+self.provider.name+" cache and updating with new information")
+        self._clearCache()
+
+        if not self._checkAuth(data):
+            raise exceptions.AuthException("Your authentication info for "+self.provider.name+" is incorrect, check your config")
+
+        # By now we know we've got data and no auth errors, all we need to do is put it in the database
+        for item in data:
+            self._parseItem(item)
 
     def _getRSSData(self):
         # Get the torrents uploaded in the last hour
@@ -264,6 +290,16 @@ class BTNCache(tvcache.TVCache):
         data = self.provider._doSearch(search_params)
        
         return data
+
+    def _parseItem(self, item):
+        (title, url) = self.provider._get_title_and_url(item)
+        
+        if not title or not url:
+            logger.log(u"The result returned from the BTN hourly search is incomplete, this result is unusable", logger.ERROR)
+            return
+        logger.log(u"Adding item from hourly BTN search to cache: " + title, logger.DEBUG)
+
+        self._addCacheEntry(title, url)
 
     def _checkAuth(self, data):
         return self.provider.checkAuthFromData(data)
