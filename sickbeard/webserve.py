@@ -1090,6 +1090,7 @@ class ConfigProviders:
                       nzbs_r_us_uid=None, nzbs_r_us_hash=None, newznab_string=None,
                       tvtorrents_digest=None, tvtorrents_hash=None,
  					  btn_user_id=None, btn_auth_token=None, btn_passkey=None, btn_authkey=None,
+                      tl_passkey=None,
                       newzbin_username=None, newzbin_password=None,
                       provider_order=None):
 
@@ -1154,6 +1155,8 @@ class ConfigProviders:
                 sickbeard.TVTORRENTS = curEnabled
             elif curProvider == 'btn':
                 sickbeard.BTN = curEnabled
+            elif curProvider == 'tl':
+                sickbeard.TL = curEnabled
             elif curProvider in newznabProviderDict:
                 newznabProviderDict[curProvider].enabled = bool(curEnabled)
             else:
@@ -1166,6 +1169,8 @@ class ConfigProviders:
         sickbeard.BTN_AUTH_TOKEN = btn_auth_token.strip()
         sickbeard.BTN_PASSKEY = btn_passkey.strip()
         sickbeard.BTN_AUTHKEY = btn_authkey.strip()
+
+        sickbeard.TL_PASSKEY = tl_passkey.strip()
 
         sickbeard.NZBSRUS_UID = nzbs_r_us_uid.strip()
         sickbeard.NZBSRUS_HASH = nzbs_r_us_hash.strip()
