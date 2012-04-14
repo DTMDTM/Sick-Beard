@@ -82,7 +82,7 @@ class BTNProvider(generic.TorrentProvider):
         results_per_page = 1000.0
 
         if 'results' in search_results and search_results['results'] >= results_per_page:
-            pages_needed = math.ceil(int(search_results['results']) / results_per_page)
+            pages_needed = int(math.ceil(int(search_results['results']) / results_per_page))
             if pages_needed > max_pages:
                 pages_needed = max_pages
             
