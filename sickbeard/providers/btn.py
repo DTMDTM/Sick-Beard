@@ -18,7 +18,7 @@
 # along with Sick Beard.  If not, see <http://www.gnu.org/licenses/>. 
 
 import sickbeard
-import generic 
+import generic
 
 from sickbeard import scene_exceptions
 from sickbeard import logger
@@ -29,6 +29,8 @@ from sickbeard.common import Quality
 from lib import jsonrpclib
 import datetime
 import time
+import socket
+import math
 
 class BTNProvider(generic.TorrentProvider):
     
@@ -58,20 +60,11 @@ class BTNProvider(generic.TorrentProvider):
     def _doSearch(self, search_params, show=None):
         params = {}
         apikey = sickbeard.BTN_API_KEY
-        server = jsonrpclib.Server('http://api.btnapps.net')
 
         if search_params:
             params.update(search_params)
 
-        search_results = {}
-
-        results_per_page = 1000.0
-        try:
-            search_results = server.getTorrentsSearch(apikey, params, int(results_per_page))
-        except jsonrpclib.jsonrpc.ProtocolError as error:
-            logger.log(u"Error accessing BTN API: " + error.message[1], logger.ERROR)
-            search_results = {'api-error': error.message[1]}
-            return search_results
+        search_results = self._api_call(apikey, params)
         
         if not search_results:
             return []
@@ -86,21 +79,18 @@ class BTNProvider(generic.TorrentProvider):
         # keep requesting until we've got everything. 
         # max 150 requests per minute so limit at that
         max_pages = 150
+        results_per_page = 1000.0
 
         if 'results' in search_results and search_results['results'] >= results_per_page:
-            pages_needed = int(float(search_results['results']) / results_per_page)
+            pages_needed = math.ceil(search_results['results'] / results_per_page)
             if pages_needed > max_pages:
                 pages_needed = max_pages
             
             # +1 because range(1,4) = 1, 2, 3
             for page in range(1,pages_needed+1):
-                try:
-                    search_results = server.getTorrentsSearch(apikey, params, results_per_page, page * results_per_page)
-                except jsonrpclib.jsonrpc.ProtocolError as error:
-                    logger.log(u"Error accessing BTN API: " + error.message[1], logger.ERROR)
-                    search_results = {'api-error': error.message[1]}
-                    return search_results
-                
+                search_results = self._api_call(apikey, params, results_per_page, page * results_per_page)
+                # Note that this these are individual requests and might time out individually. This would result in 'gaps'
+                # in the results. There is no way to fix this though.
                 if 'torrents' in search_results:
                     found_torrents.update(search_results['torrents'])
 
@@ -120,6 +110,23 @@ class BTNProvider(generic.TorrentProvider):
 #            logger.log(title, logger.DEBUG)
             
         return results
+
+    def _api_call(self, apikey, params={}, results_per_page=1000, offset=0):
+        server = jsonrpclib.Server('http://api.btnapps.net')
+        
+        search_results ={} 
+        try:
+            search_results = server.getTorrentsSearch(apikey, params, int(results_per_page), int(offset))
+        except jsonrpclib.jsonrpc.ProtocolError as error:
+            logger.log(u"Error accessing BTN API: " + error.message[1], logger.ERROR)
+            search_results = {'api-error': error.message[1]}
+            return search_results
+        except socket.timeout as error:
+            logger.log(u"Timeout while accessing BTN API", logger.WARNING)
+        except:
+            logger.log(u"Unknown error while accessing BTN API", logger.ERROR)
+
+        return search_results
 
     def _get_title_and_url(self, search_result):
         
