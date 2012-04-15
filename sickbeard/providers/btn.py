@@ -189,7 +189,7 @@ class BTNProvider(generic.TorrentProvider):
                 
                 if show.air_by_date:
                     # Search for the year of the air by date show
-                    partial_season_params = str(season.split('-')[0])
+                    partial_season_params['name'] = str(season.split('-')[0])
                 else:
                     # Search for any result which has Sxx in the name
                     partial_season_params['name'] = 'S%02d' % int(season)
