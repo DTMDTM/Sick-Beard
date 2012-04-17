@@ -216,7 +216,7 @@ class BTNProvider(generic.TorrentProvider):
             search_params['series'] = sanitizeSceneName(ep_obj.show_name)
 
         if ep_obj.show.air_by_date:
-            date_str =(ep_obj.airdate)
+            date_str = str(ep_obj.airdate)
             
             # BTN uses dots in dates, we just search for the date since that 
             # combined with the series identifier should result in just one episode
