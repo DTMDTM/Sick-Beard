@@ -137,17 +137,17 @@ class BTNProvider(generic.TorrentProvider):
             title = search_result['ReleaseName']
         else:
             # If we don't have a release name we need to get creative
-            title = ''
+            title = u''
             if 'Series' in search_result:
-                title += str(search_result['Series']) 
+                title += search_result['Series'] 
             if 'GroupName' in search_result:
-                title += '.' + str(search_result['GroupName']) if title else str(search_result['GroupName'])
+                title += '.' + search_result['GroupName'] if title else search_result['GroupName']
             if 'Resolution' in search_result:
-                title += '.' + str(search_result['Resolution']) if title else str(search_result['Resolution'])
+                title += '.' + search_result['Resolution'] if title else search_result['Resolution']
             if 'Source' in search_result:
-                title += '.' + str(search_result['Source']) if title else str(search_result['Source'])
+                title += '.' + search_result['Source'] if title else search_result['Source']
             if 'Codec' in search_result:
-                title += '.' + str(search_result['Codec']) if title else str(search_result['Codec'])
+                title += '.' + search_result['Codec'] if title else search_result['Codec']
         
         if 'DownloadURL' in search_result:
             url = search_result['DownloadURL']
@@ -259,12 +259,12 @@ class BTNProvider(generic.TorrentProvider):
         return self._doSearch({'search': search_string})
 
 class BTNCache(tvcache.TVCache):
-
+    
     def __init__(self, provider):
         tvcache.TVCache.__init__(self, provider)
         
-        # Query every 59 mins since we query the things from the last hour
-        self.minTime = 59
+        # At least 15 minutes between queries
+        self.minTime = 15
 
     def updateCache(self):
         if not self.shouldUpdate():
@@ -289,10 +289,16 @@ class BTNCache(tvcache.TVCache):
             self._parseItem(item)
 
     def _getRSSData(self):
-        # Get the torrents uploaded in the last hour
-        one_hour_ago = datetime.datetime.now() - datetime.timedelta(hours=1)
-        unix_time_stamp = time.mktime(one_hour_ago.timetuple())
-        search_params={'sinceTime': unix_time_stamp}
+        # Get the torrents uploaded since last check.
+        seconds_since_last_update = math.ceil((datetime.datetime.now() - self._getLastUpdate()).total_seconds())
+        
+        if seconds_since_last_update < 15*60:
+            # default to 15 minutes
+            seconds_since_last_update = 15*60
+        
+
+        age_string = "<=%i" % seconds_since_last_update  
+        search_params={'age': age_string}
 
         data = self.provider._doSearch(search_params)
        
@@ -302,9 +308,9 @@ class BTNCache(tvcache.TVCache):
         (title, url) = self.provider._get_title_and_url(item)
         
         if not title or not url:
-            logger.log(u"The result returned from the BTN hourly search is incomplete, this result is unusable", logger.ERROR)
+            logger.log(u"The result returned from the BTN regular search is incomplete, this result is unusable", logger.ERROR)
             return
-        logger.log(u"Adding item from hourly BTN search to cache: " + title, logger.DEBUG)
+        logger.log(u"Adding item from regular BTN search to cache: " + title, logger.DEBUG)
 
         self._addCacheEntry(title, url)
 
