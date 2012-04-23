@@ -290,7 +290,8 @@ class BTNCache(tvcache.TVCache):
 
     def _getRSSData(self):
         # Get the torrents uploaded since last check.
-        seconds_since_last_update = math.ceil((datetime.datetime.now() - self._getLastUpdate()).total_seconds())
+        seconds_since_last_update = math.ceil(time.time() - time.mktime(self._getLastUpdate().timetuple()))
+
         
         if seconds_since_last_update < 15*60:
             # default to 15 minutes
