@@ -415,13 +415,18 @@ def findSeason(show, season):
                     else:
                         foundResults[epNum] = [curResult]
             else:
-                # Season result from BTN must be a full-season torrent, leeching entire torrent.
-                logger.log(u"Not every ep in this season is needed but we only have a full season torrent, leeching entire torrent! Set the episodes you don't want to 'don't download' in your torrent client if desired!", logger.WARNING)
+                # Season result from BTN must be a full-season torrent, creating multi-ep result for it.
+                logger.log(u"Adding multi-ep result for full-season torrent. Set the episodes you don't want to 'don't download' in your torrent client if desired!")
                 epObjs = []
                 for curEpNum in allEps:
                     epObjs.append(show.getEpisode(season, curEpNum))
                 bestSeasonNZB.episodes = epObjs
-                return [bestSeasonNZB]
+
+                epNum = MULTI_EP_RESULT
+                if epNum in foundResults:
+                    foundResults[epNum].append(bestSeasonNZB)
+                else:
+                    foundResults[epNum] = [bestSeasonNZB]
 
     # go through multi-ep results and see if we really want them or not, get rid of the rest
     multiResults = {}

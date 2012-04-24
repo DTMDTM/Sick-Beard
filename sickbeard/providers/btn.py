@@ -25,6 +25,7 @@ from sickbeard import logger
 from sickbeard import tvcache
 from sickbeard.helpers import sanitizeSceneName
 from sickbeard.common import Quality
+from sickbeard.exceptions import ex
 
 from lib import jsonrpclib
 import datetime
@@ -117,11 +118,11 @@ class BTNProvider(generic.TorrentProvider):
         search_results ={} 
         try:
             search_results = server.getTorrentsSearch(apikey, params, int(results_per_page), int(offset))
-        except jsonrpclib.jsonrpc.ProtocolError as error:
-            logger.log(u"Error accessing BTN API: " + error.message[1], logger.ERROR)
-            search_results = {'api-error': error.message[1]}
+        except jsonrpclib.jsonrpc.ProtocolError, error:
+            logger.log(u"Error accessing BTN API: " + ex(error), logger.ERROR)
+            search_results = {'api-error': ex(error)}
             return search_results
-        except socket.timeout as error:
+        except socket.timeout:
             logger.log(u"Timeout while accessing BTN API", logger.WARNING)
         except:
             logger.log(u"Unknown error while accessing BTN API", logger.ERROR)
