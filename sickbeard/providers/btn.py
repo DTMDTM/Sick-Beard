@@ -305,6 +305,7 @@ class BTNCache(tvcache.TVCache):
         # Set maximum to 24 hours of "RSS" data search, older things will need to be done through backlog
         if seconds_since_last_update > 24*60*60:
             seconds_since_last_update = 24*60*60
+            logger.log(u"The last \"RSS\" update on the BTN API was more than 24 hours ago, only fetching the last 24 hours!", logger.WARNING)
 
 
         age_string = "<=%i" % seconds_since_last_update  
