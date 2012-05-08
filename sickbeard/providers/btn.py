@@ -32,6 +32,7 @@ import datetime
 import time
 import socket
 import math
+import pprint
 
 class BTNProvider(generic.TorrentProvider):
     
@@ -119,13 +120,16 @@ class BTNProvider(generic.TorrentProvider):
         try:
             search_results = server.getTorrentsSearch(apikey, params, int(results_per_page), int(offset))
         except jsonrpclib.jsonrpc.ProtocolError, error:
-            logger.log(u"Error accessing BTN API: " + ex(error), logger.ERROR)
+            logger.log(u"JSON-RPC protocol error while accessing BTN API: " + ex(error), logger.ERROR)
             search_results = {'api-error': ex(error)}
             return search_results
         except socket.timeout:
             logger.log(u"Timeout while accessing BTN API", logger.WARNING)
-        except:
-            logger.log(u"Unknown error while accessing BTN API", logger.ERROR)
+        except socket.error, error:
+            # Note that sometimes timeouts are thrown as socket errors
+            logger.log(u"Socket error while accessing BTN API: " + error[1], logger.ERROR)
+        except Exception, error:
+            logger.log(u"Unknown error while accessing BTN API, error type: " + str(type(error)) + ", printed error: " + pprint.pformat(error), logger.ERROR)
 
         return search_results
 
@@ -294,10 +298,14 @@ class BTNCache(tvcache.TVCache):
         seconds_since_last_update = math.ceil(time.time() - time.mktime(self._getLastUpdate().timetuple()))
 
         
+        # default to 15 minutes
         if seconds_since_last_update < 15*60:
-            # default to 15 minutes
             seconds_since_last_update = 15*60
-        
+
+        # Set maximum to 24 hours of "RSS" data search, older things will need to be done through backlog
+        if seconds_since_last_update > 24*60*60:
+            seconds_since_last_update = 24*60*60
+
 
         age_string = "<=%i" % seconds_since_last_update  
         search_params={'age': age_string}
