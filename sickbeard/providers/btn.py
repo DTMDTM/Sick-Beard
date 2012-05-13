@@ -129,7 +129,10 @@ class BTNProvider(generic.TorrentProvider):
             # Note that sometimes timeouts are thrown as socket errors
             logger.log(u"Socket error while accessing BTN API: " + error[1], logger.ERROR)
         except Exception, error:
-            logger.log(u"Unknown error while accessing BTN API, error type: " + str(type(error)) + ", printed error: " + pprint.pformat(error), logger.ERROR)
+            errorstring = str(error)
+            if(errorstring.startswith('<') and errorstring.endswith('>')):
+                errorstring = errorstring[1:-1]
+            logger.log(u"Unknown error while accessing BTN API: " + errorstring, logger.ERROR)
 
         return search_results
 
@@ -304,9 +307,8 @@ class BTNCache(tvcache.TVCache):
 
         # Set maximum to 24 hours of "RSS" data search, older things will need to be done through backlog
         if seconds_since_last_update > 24*60*60:
+            logger.log(u"The last successful \"RSS\" update on the BTN API was more than 24 hours ago (%i hours to be precise), only trying to fetch the last 24 hours!" %(int(seconds_since_last_update)//(60*60)), logger.WARNING)
             seconds_since_last_update = 24*60*60
-            logger.log(u"The last \"RSS\" update on the BTN API was more than 24 hours ago, only fetching the last 24 hours!", logger.WARNING)
-
 
         age_string = "<=%i" % seconds_since_last_update  
         search_params={'age': age_string}
